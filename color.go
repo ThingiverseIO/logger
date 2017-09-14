@@ -1,11 +1,10 @@
-package logging
+package logger
 
 import "fmt"
 
 type Color int
 
 // https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
-// https://groups.google.com/forum/#!topic/Golang-nuts/nluStAtr8NA
 const (
 	BLACK Color = iota
 	RED
