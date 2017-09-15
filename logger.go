@@ -169,6 +169,15 @@ func (l *Logger) Errorf(format string, val ...interface{}) {
 	l.print(ERROR, format, val...)
 }
 
+func (l *Logger) Success(message ...interface{}) {
+	msg := fmt.Sprint(message...)
+	l.print(SUCCESS, msg)
+}
+
+func (l *Logger) Successf(format string, val ...interface{}) {
+	l.print(SUCCESS, format, val...)
+}
+
 func (l *Logger) print(level Level, format string, val ...interface{}) {
 	properties, ok := l.Levels[level]
 	if !ok {
