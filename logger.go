@@ -115,6 +115,7 @@ func init() {
 
 type Logger struct {
 	Backend    Backend
+	debug      bool
 	Levels     map[Level]LevelProperties
 	Template   *template.Template
 	TimeFormat string
@@ -131,6 +132,10 @@ func New(prefix string) (logger *Logger) {
 		Prefix:     prefix,
 	}
 	return
+}
+
+func (l *Logger) SetDebug(debug bool) {
+	l.debug = debug
 }
 
 func (l *Logger) Init(message ...interface{}) {
@@ -152,11 +157,17 @@ func (l *Logger) Infof(format string, val ...interface{}) {
 }
 
 func (l *Logger) Debug(message ...interface{}) {
+	if !l.debug {
+		return
+	}
 	msg := fmt.Sprint(message...)
 	l.print(DEBUG, msg)
 }
 
 func (l *Logger) Debugf(format string, val ...interface{}) {
+	if !l.debug {
+		return
+	}
 	l.print(DEBUG, format, val...)
 }
 
