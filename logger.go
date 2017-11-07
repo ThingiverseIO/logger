@@ -110,7 +110,7 @@ func GetDefaultBackend() Backend {
 
 func init() {
 	SetDefaultBackend(NewMultiWriteBackend(os.Stdout))
-	SetDefaultTemplate("{{.Timestamp}} \u2771 {{.Prefix}} \u2771 {{.Level}}\t%s")
+	SetDefaultTemplate("{{.Timestamp}} \u2771\u2771 {{.Prefix}} \u2771\u2771 {{.Level}} \u2771\u2771\t%s")
 }
 
 type Logger struct {
@@ -176,6 +176,10 @@ func (l *Logger) Success(message ...interface{}) {
 
 func (l *Logger) Successf(format string, val ...interface{}) {
 	l.print(SUCCESS, format, val...)
+}
+
+func (l *Logger) PrintSuccess() {
+	l.Success("Success")
 }
 
 func (l *Logger) print(level Level, format string, val ...interface{}) {
