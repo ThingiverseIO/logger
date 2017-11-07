@@ -44,5 +44,5 @@ func Paint(s string, foreground Color, foregroundHi bool, background Color, back
 	} else {
 		bg = background.AsBackground()
 	}
-	return fmt.Sprintf("\x1b[%d;%dm%s\x1b[0m", fg, bg, s)
+	return fmt.Sprintf("\x1b[%d;%dm %s \x1b[0m", fg, bg, s)
 }

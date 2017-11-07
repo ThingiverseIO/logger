@@ -57,7 +57,7 @@ func NewMessage(prefix, timeFormat string, lvl Level, msg string, val ...interfa
 func (m Message) ExecuteTemplate(tmpl *template.Template) string {
 	var buf bytes.Buffer
 	tmpl.Execute(&buf, m)
-	return buf.String()
+	return fmt.Sprintf(buf.String(), m.Msg)
 }
 
 var (
@@ -110,7 +110,7 @@ func GetDefaultBackend() Backend {
 
 func init() {
 	SetDefaultBackend(NewMultiWriteBackend(os.Stdout))
-	SetDefaultTemplate("{{.Timestamp}} \2771 {{.Prefix}} \2771 {{.Level}}\t{{.Msg}}")
+	SetDefaultTemplate("{{.Timestamp}} \u2771 {{.Prefix}} \u2771 {{.Level}}\t%s")
 }
 
 type Logger struct {
