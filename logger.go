@@ -134,8 +134,9 @@ func New(prefix string) (logger *Logger) {
 	return
 }
 
-func (l *Logger) SetDebug(debug bool) {
+func (l *Logger) SetDebug(debug bool) *Logger {
 	l.debug = debug
+	return l
 }
 
 func (l *Logger) Init(message ...interface{}) {
