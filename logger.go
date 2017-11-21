@@ -1,141 +1,58 @@
 package logger
 
 import (
-	"bytes"
 	"fmt"
 	"html/template"
-	"io"
 	"os"
-	"sync"
-	"time"
+	"sync/atomic"
 )
-
-type Level string
-
-const (
-	INFO    Level = "INFO"
-	INIT    Level = "INIT"
-	ERROR   Level = "ERROR"
-	FATAL   Level = "FATAL"
-	DEBUG   Level = "DEBUG"
-	SUCCESS Level = "SUCCESS"
-)
-
-type LevelProperties struct {
-	Foreground   Color
-	ForegroundHi bool
-	Background   Color
-	BackgroundHi bool
-}
-
-var DefaultLevelProperties = map[Level]LevelProperties{
-	INFO:    LevelProperties{Foreground: GREEN},
-	INIT:    LevelProperties{Foreground: BLUE, ForegroundHi: true},
-	ERROR:   LevelProperties{Foreground: WHITE, Background: RED},
-	FATAL:   LevelProperties{Foreground: WHITE, Background: RED, BackgroundHi: true},
-	DEBUG:   LevelProperties{Background: YELLOW, BackgroundHi: true},
-	SUCCESS: LevelProperties{Foreground: CYAN},
-}
-
-type Message struct {
-	Timestamp string
-	Prefix    string
-	Level     Level
-	Msg       string
-}
-
-func NewMessage(prefix, timeFormat string, lvl Level, msg string, val ...interface{}) (m Message) {
-	m = Message{
-		Timestamp: time.Now().Format(timeFormat),
-		Prefix:    prefix,
-		Level:     lvl,
-		Msg:       fmt.Sprintf(msg, val...),
-	}
-	return
-}
-
-func (m Message) ExecuteTemplate(tmpl *template.Template) string {
-	var buf bytes.Buffer
-	tmpl.Execute(&buf, m)
-	return fmt.Sprintf(buf.String(), m.Msg)
-}
 
 var (
 	defaultBackend  Backend
 	defaultTemplate *template.Template
 )
 
-func SetDefaultTemplate(tmpl string) {
-	defaultTemplate, _ = template.New("tvio_logger_default").Parse(tmpl)
-}
-
-func GetDefaultTemplate() *template.Template {
-	return defaultTemplate
-}
-
-const defaultTimeFormat = "15:04:05.000"
-
-type Backend interface {
-	Write(msg string)
-}
-
-type MultiWriteBackend struct {
-	m      *sync.Mutex
-	Writer []io.Writer
-}
-
-func (b *MultiWriteBackend) Write(msg string) {
-	b.m.Lock()
-	defer b.m.Unlock()
-	for _, w := range b.Writer {
-		fmt.Fprintln(w, msg)
-	}
-}
-
-func NewMultiWriteBackend(w ...io.Writer) (b *MultiWriteBackend) {
-	b = &MultiWriteBackend{
-		m:      &sync.Mutex{},
-		Writer: w,
-	}
-	return
-}
-
-func SetDefaultBackend(b Backend) {
-	defaultBackend = b
-}
-
-func GetDefaultBackend() Backend {
-	return defaultBackend
-}
 
 func init() {
-	SetDefaultBackend(NewMultiWriteBackend(os.Stdout))
-	SetDefaultTemplate("{{.Timestamp}} \u2771\u2771 {{.Prefix}} \u2771\u2771 {{.Level}} \u2771\u2771\t%s")
+	defaultTemplate, _ = template.New("tvio_logger_default").Parse(
+		"{{.FormattedTime}} \u2771\u2771 {{.Prefix}} \u2771\u2771 {{.Level.Name}} \u2771\u2771\t%s")
+	defaultBackend = NewWriterBackend(os.Stdout)
 }
 
 type Logger struct {
-	Backend    Backend
-	debug      bool
-	Levels     map[Level]LevelProperties
-	Template   *template.Template
-	TimeFormat string
-	Prefix     string
+	Prefix string
+
+	backend  Backend
+	debug    bool
+	levels   map[string]Level
+	logNr    uint64
+	template *template.Template
 }
 
 func New(prefix string) (logger *Logger) {
 
 	logger = &Logger{
-		Backend:    defaultBackend,
-		Levels:     DefaultLevelProperties,
-		Template:   defaultTemplate,
-		TimeFormat: defaultTimeFormat,
-		Prefix:     prefix,
+		Prefix:   prefix,
+		backend:  defaultBackend,
+		template: defaultTemplate,
+		levels:   DefaultLevels,
 	}
 	return
+
+}
+
+func (l *Logger) SetBackend(backend Backend) *Logger {
+	l.backend = backend
+	return l
 }
 
 func (l *Logger) SetDebug(debug bool) *Logger {
 	l.debug = debug
+	return l
+}
+
+func (l *Logger) SetTemplate(tmpl string) *Logger {
+	l.template, _ = template.New("tvio_logger_default").Parse(tmpl)
 	return l
 }
 
@@ -194,12 +111,11 @@ func (l *Logger) PrintSuccess() {
 	l.Success("Success")
 }
 
-func (l *Logger) print(level Level, format string, val ...interface{}) {
-	properties, ok := l.Levels[level]
+func (l *Logger) print(level, format string, val ...interface{}) {
+	lvl, ok := l.levels[level]
 	if !ok {
-		properties = DefaultLevelProperties[INFO]
+		lvl = l.levels[INFO]
 	}
-	message := NewMessage(l.Prefix, l.TimeFormat, level, format, val...).ExecuteTemplate(l.Template)
-	message = Paint(message, properties.Foreground, properties.ForegroundHi, properties.Background, properties.BackgroundHi)
-	l.Backend.Write(message)
+	message := NewMessage(atomic.AddUint64(&l.logNr, 1), l.Prefix, lvl, l.template, format, val...)
+	l.backend.Write(message)
 }
